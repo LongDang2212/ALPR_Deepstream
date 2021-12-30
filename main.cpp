@@ -19,6 +19,8 @@
 #include "nvds_parse_bbox_wpod.h"
 #include "gst-nvdssr.h"
 
+#define OUTPUT_FILE "output/out.mp4"
+
 #define INTERVAL 2
 #define OSD_PROCESS_MODE 0
 #define SGIE_INPUT_H 32
@@ -37,13 +39,13 @@
 #define MUXER_BATCH_TIMEOUT_USEC 25000
 #define MAX_DISPLAY_LEN 64
 #define MEMORY_FEATURES "memory:NVMM"
-#define PGIE_CONFIG_FILE "/opt/nvidia/deepstream/deepstream-5.0/sources/alpr_ds/config_pgie.txt"
-#define SGIE_CONFIG_FILE "/opt/nvidia/deepstream/deepstream-5.0/sources/alpr_ds/config_sgie.txt"
+#define PGIE_CONFIG_FILE "config_pgie.txt"
+#define SGIE_CONFIG_FILE "config_sgie.txt"
 #define START_TIME 0
 #define SHOW_CRNN 0
 const std::string alphabet = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-//./deepstream-ALPR file:///opt/nvidia/deepstream/deepstream-5.0/sources/alpr_ds/wpod/deepstream_app_wpod/test1.mp4
+// ./deepstream-ALPR file:///opt/nvidia/deepstream/deepstream-5.0/sources/alpr_ds/wpod/deepstream_app_wpod/test1.mp4
 
 /* Duration of recording
  */
@@ -380,7 +382,7 @@ sgie_pad_buffer_probe(GstPad *pad, GstPadProbeInfo *info, gpointer u_data)
                 }
                 else
                 {
-                 obj_meta->text_params.display_text = g_strdup(sim.c_str());  
+                    obj_meta->text_params.display_text = g_strdup(sim.c_str());
                 }
             }
         }
@@ -648,7 +650,7 @@ int main(int argc, char *argv[])
                  "display-text", OSD_DISPLAY_TEXT, NULL);
 
     g_object_set(G_OBJECT(sink), "sync", FALSE, NULL);
-    g_object_set(G_OBJECT(sink), "location", "output/out.mp4", NULL);
+    g_object_set(G_OBJECT(sink), "location", OUTPUT_FILE, NULL);
 
     /* we add a message handler */
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
@@ -662,25 +664,23 @@ int main(int argc, char *argv[])
     // h264parser, decoder,
     gst_bin_add_many(GST_BIN(pipeline), queue1, pgie, queue_sgie, sgie, queue2, tiler, queue3,
                      filter1, nvvidconv, filter2, nvosd, nvvidconv1, filter3, converter, filter4,
-                     x264enc, qtmux, sink, NULL);
+                     x264enc, qtmux, transform, sink, NULL);
     /* we link the elements together */
     if (!gst_element_link_many(streammux, queue1, pgie, queue_sgie, sgie, queue2, tiler, queue3,
                                filter1, nvvidconv, filter2, nvosd, nvvidconv1, filter3, converter, filter4,
-                               x264enc, qtmux, sink, NULL))
+                               x264enc, qtmux, transform, sink, NULL))
     {
         g_printerr("Elements could not be linked. Exiting.\n");
         return -1;
     }
 #else
-    //queue_sgie, sgie,
     gst_bin_add_many(GST_BIN(pipeline), queue1, pgie, queue_sgie, sgie, queue2, tiler, queue3,
-                     nvvidconv, queue4, nvosd, queue5, sink, NULL);
-    // gst_bin_add_many(GST_BIN(pipeline), tee_osd, queue_osd, encoder_osd,
-    //                  parse_osd, ctx->recordbin, NULL);
-    /* we link the elements together
-   * nvstreammux -> nvinfer -> nvtiler -> nvvidconv -> nvosd -> video-renderer */
+                     filter1, nvvidconv, filter2, nvosd, nvvidconv1, filter3, converter, filter4,
+                     x264enc, qtmux, sink, NULL);
+    /* we link the elements together */
     if (!gst_element_link_many(streammux, queue1, pgie, queue_sgie, sgie, queue2, tiler, queue3,
-                               nvvidconv, queue4, nvosd, queue5, sink, NULL))
+                               filter1, nvvidconv, filter2, nvosd, nvvidconv1, filter3, converter, filter4,
+                               x264enc, qtmux, sink, NULL))
     {
         g_printerr("Elements could not be linked. Exiting.\n");
         return -1;

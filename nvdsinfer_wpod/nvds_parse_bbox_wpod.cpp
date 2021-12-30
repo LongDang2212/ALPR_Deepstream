@@ -204,6 +204,10 @@ void post_process(std::vector<DLabel> &out, float *prob, int h, int w)
             o.push_back(v);
         }
     }
+    if(o.empty())
+    {
+        return;
+    }
     std::vector<DLabel> label;
     for (int i = 0; i < o.size(); i++)
     {
